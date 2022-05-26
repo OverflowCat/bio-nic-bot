@@ -8,7 +8,41 @@ use teloxide::prelude::*;
 use teloxide::types::*;
 
 use crate::bionic::bionify;
-use crate::text::escape_markdown_v2;
+use crate::text::{escape_all_markdown_v2, escape_markdown_v2};
+
+fn gen_res(text: &str) -> Vec<InlineQueryResult> {
+    /*
+    let escaped: String;
+    if query.from.username == Some("xxxxx".to_string()) {
+        println!("USERNAME: {}", query.from.username.as_ref().unwrap());
+        escaped = escape_all_markdown_v2(&query.query);
+    } else {
+        escaped = escape_markdown_v2(&query.query);
+    }
+    */
+    let bionic = bionify(&text);
+    let result_article = InlineQueryResultArticle::new(
+        // Each item needs a unique ID, as well as the response container for the
+        // items. These can be whatever, as long as they don't conflict.
+        "01".to_string(),
+        // What the user will actually see
+        "Bionic writing",
+        // What message will be sent when clicked/tapped
+        InputMessageContent::Text(
+            InputMessageContentText::new(&bionic).parse_mode(ParseMode::MarkdownV2),
+        ),
+    )
+    .thumb_url(
+        "http://telegra.ph/file/7cae60e9c68a995866fb3.png"
+            .parse()
+            .unwrap(),
+    )
+    .description("Send a bionic reading message");
+    vec![
+        InlineQueryResult::Article(result_article),
+        // InlineQueryResult::Article(ddg_search),
+    ]
+}
 
 #[tokio::main]
 async fn main() {
@@ -21,40 +55,18 @@ async fn main() {
             if query.query.is_empty() {
                 return respond(());
             }
+            println!("Text: {}", query.query);
             let escaped = escape_markdown_v2(&query.query);
-            let bionic = bionify(&escaped);
-            let result_article = InlineQueryResultArticle::new(
-                // Each item needs a unique ID, as well as the response container for the
-                // items. These can be whatever, as long as they don't conflict.
-                "01".to_string(),
-                // What the user will actually see
-                "Bionic writing",
-                // What message will be sent when clicked/tapped
-                InputMessageContent::Text(
-                    InputMessageContentText::new(&bionic).parse_mode(ParseMode::MarkdownV2),
-                ),
-            )
-            .thumb_url(
-                "http://telegra.ph/file/7cae60e9c68a995866fb3.png"
-                    .parse()
-                    .unwrap(),
-            )
-            .description("Send a bionic reading message");
-            // While constructing them from the struct itself is possible, it is preferred
-            // to use the builder pattern if you wish to add more
-            // information to your result. Please refer to the documentation
-            // for more detailed information about each field. https://docs.rs/teloxide/latest/teloxide/types/struct.InlineQueryResultArticle.html
-
-            let results = vec![
-                InlineQueryResult::Article(result_article),
-                // InlineQueryResult::Article(ddg_search),
-            ];
-
-            // Send it off! One thing to note -- the ID we use here must be of the query
-            // we're responding to.
+            let results = gen_res(&escaped);
             let response = bot.answer_inline_query(&query.id, results).send().await;
             if let Err(err) = response {
-                log::error!("Error in handler: {:?}", err);
+                log::error!("Error first try: {:?}", err);
+                let escaped = escape_all_markdown_v2(&query.query);
+                let results = gen_res(&escaped);
+                let response = bot.answer_inline_query(&query.id, results).send().await;
+                if let Err(err) = response {
+                    log::error!("Error second try: {:?}", err);
+                }
             }
             respond(())
         },
