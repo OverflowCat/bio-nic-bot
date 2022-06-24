@@ -8,9 +8,11 @@ use teloxide::dptree::endpoint;
 use teloxide::prelude::*;
 use teloxide::types::*;
 
+use itertools::Itertools;
+
 use crate::bionic::bionify;
-use crate::zh::tokenize;
 use crate::text::{escape_all_markdown_v2, escape_markdown_v2};
+use crate::zh::*;
 
 fn gen_res(text: &str) -> Vec<InlineQueryResult> {
     /*
@@ -40,22 +42,26 @@ fn gen_res(text: &str) -> Vec<InlineQueryResult> {
             .unwrap(),
     )
     .description("Send a bionic reading message");
-    
-    let tokenized = tokenize(&text);
-    let bionified: Vec<String> = tokenized.iter().map(|x| bionify(x)).collect();
-    let bionified = bionified.join("");
-    let result_article_zh = InlineQueryResultArticle::new(
-        "zh",
-        "Jieba",
-        InputMessageContent::Text(
-            InputMessageContentText::new(bionified).parse_mode(ParseMode::MarkdownV2),
-        ),
-    ).description("Send with jieba");
 
-    vec![
+    let mut res = vec![
         InlineQueryResult::Article(result_article),
-        InlineQueryResult::Article(result_article_zh)
-    ]
+    ];
+
+    if zh_possibility(&text) > 0.6 {
+        let tokenized = tokenize(&text);
+        let bionified = tokenized.into_iter().map(bionify).join("");
+        let result_article_zh = InlineQueryResultArticle::new(
+            "zh",
+            "Jieba",
+            InputMessageContent::Text(
+                InputMessageContentText::new(bionified).parse_mode(ParseMode::MarkdownV2),
+            ),
+        )
+        .description("Send with jieba");
+        res.push(InlineQueryResult::Article(result_article_zh));
+    }
+
+    res
 }
 
 #[tokio::main]
