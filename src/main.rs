@@ -1,5 +1,6 @@
 pub mod bionic;
 pub mod text;
+pub mod zh;
 
 use std::env;
 
@@ -8,6 +9,7 @@ use teloxide::prelude::*;
 use teloxide::types::*;
 
 use crate::bionic::bionify;
+use crate::zh::tokenize;
 use crate::text::{escape_all_markdown_v2, escape_markdown_v2};
 
 fn gen_res(text: &str) -> Vec<InlineQueryResult> {
@@ -38,9 +40,21 @@ fn gen_res(text: &str) -> Vec<InlineQueryResult> {
             .unwrap(),
     )
     .description("Send a bionic reading message");
+    
+    let tokenized = tokenize(&text);
+    let bionified: Vec<String> = tokenized.iter().map(|x| bionify(x)).collect();
+    let bionified = bionified.join("");
+    let result_article_zh = InlineQueryResultArticle::new(
+        "zh",
+        "Jieba",
+        InputMessageContent::Text(
+            InputMessageContentText::new(bionified).parse_mode(ParseMode::MarkdownV2),
+        ),
+    ).description("Send with jieba");
+
     vec![
         InlineQueryResult::Article(result_article),
-        // InlineQueryResult::Article(ddg_search),
+        InlineQueryResult::Article(result_article_zh)
     ]
 }
 
