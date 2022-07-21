@@ -5,6 +5,10 @@ lazy_static! {
     static ref JIEBA: Jieba = Jieba::new();
 }
 
+pub fn contains_cjk_characters(s: &str) -> bool {
+    s.chars().any(|c| c >= '\u{4E00}' && c <= '\u{9FFF}')
+}
+
 pub fn tokenize(text: &str) -> Vec<&str>{
     let words = JIEBA.cut(text, false);
     words

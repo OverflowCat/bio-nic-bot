@@ -1,6 +1,7 @@
 pub mod bionic;
 pub mod text;
 pub mod zh;
+pub mod shuffle;
 
 use std::env;
 
@@ -15,15 +16,6 @@ use crate::text::{escape_all_markdown_v2, escape_markdown_v2};
 use crate::zh::*;
 
 fn gen_res(text: &str) -> Vec<InlineQueryResult> {
-    /*
-    let escaped: String;
-    if query.from.username == Some("xxxxx".to_string()) {
-        println!("USERNAME: {}", query.from.username.as_ref().unwrap());
-        escaped = escape_all_markdown_v2(&query.query);
-    } else {
-        escaped = escape_markdown_v2(&query.query);
-    }
-    */
     let bionic = bionify(&text);
     let result_article = InlineQueryResultArticle::new(
         // Each item needs a unique ID, as well as the response container for the
@@ -59,6 +51,19 @@ fn gen_res(text: &str) -> Vec<InlineQueryResult> {
         )
         .description("Send with jieba");
         res.push(InlineQueryResult::Article(result_article_zh));
+    }
+
+    if text.starts_with("s ") {
+        let shuffled = shuffle::shuffle_paragraph(&text[2..]);
+        let result_article_shuffle = InlineQueryResultArticle::new(
+            "shuffle",
+            "Shuffle",
+            InputMessageContent::Text(
+                InputMessageContentText::new(shuffled).parse_mode(ParseMode::MarkdownV2),
+            ),
+        )
+        .description("Send with shuffle");
+        res.push(InlineQueryResult::Article(result_article_shuffle));
     }
 
     res
@@ -100,7 +105,6 @@ async fn main() {
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![])
         .build()
-        .setup_ctrlc_handler()
         .dispatch()
         .await;
 }
